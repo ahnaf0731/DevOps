@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #E36414;
+  --color-secondary: #0F4C5C;
+  --color-accent: #5F0F40;
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell,
+    "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  @apply bg-gray-50 text-gray-800;
+}
+
+
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium transition;
+}
+.btn-primary {
+  @apply bg-primary text-white hover:opacity-90;
+}
+.btn-outline {
+  @apply border border-gray-300 hover:bg-gray-50;
+}
+.card {
+  @apply bg-white rounded-2xl shadow-sm;
+}
+.input {
+  @apply w-full border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30;
+}
+.badge {
+  @apply text-xs px-3 py-1 rounded-full;
+}
