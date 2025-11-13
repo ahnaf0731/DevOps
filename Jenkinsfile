@@ -16,48 +16,40 @@ pipeline {
             }
         }
         
-        stage('Test System Tools') {
+        stage('Verify Tools') {
             steps {
                 sh 'java -version'
-                sh 'mvn -version || echo "Maven not installed"'
-                sh 'docker --version || echo "Docker not installed"'
+                sh 'mvn -version'
+                sh 'docker --version'
                 sh 'ls -la'
             }
         }
         
-        stage('Backend: Clean & Compile') {
+        stage('Backend Build') {
             steps {
                 dir('backend') {  
-                    sh "mvn clean compile || echo 'Maven build failed - continuing for demo'"
+                    sh 'mvn clean compile || echo "Backend build failed - check if backend directory exists"'
                 }
             }
         }
         
-        stage('Frontend: Test') {
+        stage('Frontend Check') {
             steps {
                 dir('frontend') {  
-                    sh 'ls -la || echo "Frontend directory not found"'
+                    sh 'ls -la && echo "Frontend directory found" || echo "No frontend directory"'
                 }
             }
         }
         
-        stage('Docker Test') {
+        stage('Simple Docker Test') {
             steps {
-                script {
-                    sh 'docker version || echo "Docker not available"'
-                }
+                sh 'docker images || echo "Docker command failed"'
             }
         }
     }
     post {
         always {
-            echo 'Pipeline completed!'
-        }
-        success {
-            echo 'Success! All stages completed.'
-        }
-        failure {
-            echo 'Some stages failed - check tool configuration'
+            echo 'Pipeline execution completed!'
         }
     }
 }
