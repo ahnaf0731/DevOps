@@ -15,10 +15,21 @@ pipeline {
         stage('Code Checkout') {
             steps {
                 git branch: 'main',
-                    changelog: false,
-                    poll: false,
                     url: 'https://github.com/ahnaf0731/DevOps.git',
                     credentialsId: "${GITHUB_CRED}"
+            }
+        }
+        
+        stage('Verify Project Structure') {
+            steps {
+                sh '''
+                    echo "=== Project Structure ==="
+                    ls -la
+                    echo "=== Backend Content ==="
+                    ls -la backend/
+                    echo "=== Frontend Content (fixitnow) ==="
+                    ls -la fixitnow/
+                '''
             }
         }
         
@@ -74,7 +85,7 @@ pipeline {
         
         stage('Frontend: Docker Build & Push') {
             steps {
-                dir('frontend') {  
+                dir('fixitnow') {  // Changed from 'frontend' to 'fixitnow'
                     script {
                         withDockerRegistry(credentialsId: "${DOCKERHUB_CRED}", url: '') {
                             def buildTag = "${FRONTEND_IMAGE}:${BUILD_NUMBER}"
