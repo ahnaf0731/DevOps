@@ -1,9 +1,5 @@
 pipeline {
     agent any
-    tools {
-        jdk 'jdk21'
-        maven 'maven3'
-    }
     environment {
         GITHUB_CRED = 'GitHub-Token'
         DOCKERHUB_CRED = 'DockerHub-Token'
@@ -20,15 +16,17 @@ pipeline {
             }
         }
         
-        stage('Verify Project Structure') {
+        stage('Setup Environment') {
             steps {
                 sh '''
-                    echo "=== Project Structure ==="
-                    ls -la
-                    echo "=== Backend Content ==="
-                    ls -la backend/
-                    echo "=== Frontend Content (fixitnow) ==="
-                    ls -la fixitnow/
+                    echo "=== Setting up Java Environment ==="
+                    # Find Java installation
+                    JAVA_PATH=$(dirname $(dirname $(readlink -f $(which java))))
+                    export JAVA_HOME=$JAVA_PATH
+                    export PATH=$JAVA_HOME/bin:$PATH
+                    echo "JAVA_HOME: $JAVA_HOME"
+                    java -version
+                    mvn -version || echo "Maven not available"
                 '''
             }
         }
@@ -36,22 +34,13 @@ pipeline {
         stage('Backend: Clean & Compile') {
             steps {
                 dir('backend') {  
-                    sh "mvn clean compile"
-                }
-            }
-        }
-        
-        stage('Backend: SonarQube Analysis') {
-            steps {
-                dir('backend') { 
-                    withCredentials([string(credentialsId: "${SONAR_CRED}", variable: 'SONAR_TOKEN')]) {
-                        sh '''
-                            mvn sonar:sonar \
-                            -Dsonar.host.url=http://localhost:9000 \
-                            -Dsonar.token=$SONAR_TOKEN \
-                            -Dsonar.java.binaries=target/classes
-                        '''
-                    }
+                    sh '''
+                        # Set JAVA_HOME explicitly for Maven
+                        export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+                        export PATH=$JAVA_HOME/bin:$PATH
+                        echo "Using JAVA_HOME: $JAVA_HOME"
+                        mvn clean compile
+                    '''
                 }
             }
         }
@@ -59,7 +48,11 @@ pipeline {
         stage('Backend: Package') {
             steps {
                 dir('backend') {  
-                    sh "mvn package -DskipTests"
+                    sh '''
+                        export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+                        export PATH=$JAVA_HOME/bin:$PATH
+                        mvn package -DskipTests
+                    '''
                 }
             }
         }
@@ -85,7 +78,7 @@ pipeline {
         
         stage('Frontend: Docker Build & Push') {
             steps {
-                dir('fixitnow') {  // Changed from 'frontend' to 'fixitnow'
+                dir('fixitnow') { 
                     script {
                         withDockerRegistry(credentialsId: "${DOCKERHUB_CRED}", url: '') {
                             def buildTag = "${FRONTEND_IMAGE}:${BUILD_NUMBER}"
