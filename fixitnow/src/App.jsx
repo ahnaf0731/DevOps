@@ -11,7 +11,8 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 
 
-export const API_BASE_URL = process.env.VITE_API_BASE_URL || "/api";
+//export const API_BASE_URL = process.env.VITE_API_BASE_URL || "/api";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 
 const AuthContext = createContext(null);
