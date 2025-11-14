@@ -1,129 +1,117 @@
 pipeline {
     agent any
+    tools {
+        jdk 'jdk17'
+        maven 'maven3'
+    }
     environment {
         GITHUB_CRED = 'GitHub-Token'
-        DOCKERHUB_CRED = 'DockerHub-Token'  // Make sure this credential exists in Jenkins
-        BACKEND_IMAGE = 'ahnaf4920/backend-v1.0'
-        FRONTEND_IMAGE = 'ahnaf4920/frontend-v1.0'
+        DOCKERHUB_CRED = 'DockerHub-Token'
+        SONAR_CRED = 'SonarQube-Token'
+        BACKEND_IMAGE = 'ahnaf4920/backend-v1.0'  // Changed to your Docker Hub username
+        FRONTEND_IMAGE = 'ahnaf4920/frontend-v1.0'  // Changed to your Docker Hub username
     }
     stages {
         stage('Code Checkout') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/ahnaf0731/DevOps.git',
+                    changelog: false,
+                    poll: false,
+                    url: 'https://github.com/ahnaf0731/DevOps.git',  // Your repo
                     credentialsId: "${GITHUB_CRED}"
             }
         }
         
-        stage('Verify Environment') {
+        stage('Backend: Clean & Compile') {
             steps {
-                sh '''
-                    echo "🚀 CI/CD PIPELINE STARTED"
-                    echo "========================="
-                    docker --version
-                    java -version
-                    echo "Project structure verified!"
-                '''
+                dir('backend') {  
+                    sh "mvn clean compile"
+                }
             }
         }
         
-        stage('Backend: Docker Build') {
+        stage('Backend: SonarQube Analysis') {
+            steps {
+                dir('backend') { 
+                    withCredentials([string(credentialsId: "${SONAR_CRED}", variable: 'SONAR_TOKEN')]) {
+                        sh '''
+                            mvn sonar:sonar \
+                            -Dsonar.host.url=http://localhost:9000 \
+                            -Dsonar.token=$SONAR_TOKEN \
+                            -Dsonar.java.binaries=target/classes
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Backend: Package') {
+            steps {
+                dir('backend') {  
+                    sh "mvn package -DskipTests"
+                }
+            }
+        }
+        
+        stage('Backend: Docker Build & Push') {
             steps {
                 dir('backend') {  
                     script {
-                        sh 'docker build -t ${BACKEND_IMAGE} -f Dockerfile .'
-                        echo "✅ Backend Docker image built successfully!"
+                        withDockerRegistry(credentialsId: "${DOCKERHUB_CRED}", url: '') {
+                            def buildTag = "${BACKEND_IMAGE}:${BUILD_NUMBER}"
+                            def latestTag = "${BACKEND_IMAGE}:latest"
+                            sh "docker build -t ${BACKEND_IMAGE} -f Dockerfile ."
+                            sh "docker tag ${BACKEND_IMAGE} ${buildTag}"
+                            sh "docker tag ${BACKEND_IMAGE} ${latestTag}"
+                            sh "docker push ${buildTag}"
+                            sh "docker push ${latestTag}"
+                            env.BACKEND_BUILD_TAG = buildTag
+                        }
                     }
                 }
             }
         }
         
-        stage('Frontend: Docker Build') {
+        stage('Frontend: Docker Build & Push') {
             steps {
-                dir('fixitnow') { 
+                dir('fixitnow') {  // Changed from 'frontend' to 'fixitnow' for your project
                     script {
-                        sh 'docker build -t ${FRONTEND_IMAGE} .'
-                        echo "✅ Frontend Docker image built successfully!"
-                    }
-                }
-            }
-        }
-        
-        stage('Push to Docker Hub') {
-            steps {
-                script {
-                    // Push Backend Image
-                    dir('backend') {
-                        withDockerRegistry(credentialsId: "${DOCKERHUB_CRED}", url: 'https://index.docker.io/v1/') {
-                            sh """
-                                docker tag ${BACKEND_IMAGE} ${BACKEND_IMAGE}:${BUILD_NUMBER}
-                                docker tag ${BACKEND_IMAGE} ${BACKEND_IMAGE}:latest
-                                echo "📤 Pushing backend image..."
-                                docker push ${BACKEND_IMAGE}:${BUILD_NUMBER}
-                                docker push ${BACKEND_IMAGE}:latest
-                            """
-                        }
-                    }
-                    
-                    // Push Frontend Image  
-                    dir('fixitnow') {
-                        withDockerRegistry(credentialsId: "${DOCKERHUB_CRED}", url: 'https://index.docker.io/v1/') {
-                            sh """
-                                docker tag ${FRONTEND_IMAGE} ${FRONTEND_IMAGE}:${BUILD_NUMBER}
-                                docker tag ${FRONTEND_IMAGE} ${FRONTEND_IMAGE}:latest
-                                echo "📤 Pushing frontend image..."
-                                docker push ${FRONTEND_IMAGE}:${BUILD_NUMBER}
-                                docker push ${FRONTEND_IMAGE}:latest
-                            """
+                        withDockerRegistry(credentialsId: "${DOCKERHUB_CRED}", url: '') {
+                            def buildTag = "${FRONTEND_IMAGE}:${BUILD_NUMBER}"
+                            def latestTag = "${FRONTEND_IMAGE}:latest"
+                            sh "docker build -t ${FRONTEND_IMAGE} ."
+                            sh "docker tag ${FRONTEND_IMAGE} ${buildTag}"
+                            sh "docker tag ${FRONTEND_IMAGE} ${latestTag}"
+                            sh "docker push ${buildTag}"
+                            sh "docker push ${latestTag}"
+                            env.FRONTEND_BUILD_TAG = buildTag
                         }
                     }
                 }
             }
         }
         
-        stage('Final Success Demonstration') {
+        stage('Staging Deployment') {
             steps {
-                sh '''
-                    echo " "
-                    echo "🎉 CI/CD PIPELINE COMPLETED SUCCESSFULLY!"
-                    echo "=========================================="
-                    echo "✅ GitHub Integration: WORKING"
-                    echo "✅ Jenkins Configuration: WORKING"
-                    echo "✅ Backend Build (Java/Spring): WORKING"
-                    echo "✅ Frontend Build (Node.js/React): WORKING"
-                    echo "✅ Docker Containerization: WORKING"
-                    echo "✅ Multi-stage Pipeline: WORKING"
-                    echo "✅ Docker Hub Push: WORKING"
-                    echo " "
-                    echo "📦 Built Docker Images:"
-                    docker images | grep ahnaf4920
-                    echo " "
-                    echo "🌐 Pushed to Docker Hub:"
-                    echo "Backend: ${BACKEND_IMAGE}:${BUILD_NUMBER}"
-                    echo "Backend: ${BACKEND_IMAGE}:latest"
-                    echo "Frontend: ${FRONTEND_IMAGE}:${BUILD_NUMBER}"
-                    echo "Frontend: ${FRONTEND_IMAGE}:latest"
-                    echo " "
-                    echo "🚀 DEPLOYMENT READY!"
-                    echo "Run: docker compose up -d"
-                    echo "Backend: http://localhost:8091"
-                    echo "Frontend: http://localhost:80"
-                    echo " "
-                    echo "📎 Docker Hub URLs:"
-                    echo "https://hub.docker.com/r/ahnaf4920/backend-v1.0"
-                    echo "https://hub.docker.com/r/ahnaf4920/frontend-v1.0"
-                '''
+                // docker-compose.yml is in root directory
+                sh 'docker compose down || true'
+                sh 'docker compose pull'
+                sh 'docker compose up -d'
             }
         }
     }
     post {
         always {
-            echo 'Pipeline execution completed!'
+            echo 'Cleaning up workspace...'
             cleanWs()
         }
         success {
-            echo '🎊 CONGRATULATIONS! Your CI/CD pipeline is fully operational!'
-            echo "Docker images pushed to Docker Hub successfully! 🐳"
+            echo 'Pipeline completed successfully!'
+            echo "Backend: ${env.BACKEND_BUILD_TAG}"
+            echo "Frontend: ${env.FRONTEND_BUILD_TAG}"
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
