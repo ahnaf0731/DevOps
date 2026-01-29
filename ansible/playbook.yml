@@ -1,0 +1,59 @@
+---
+- name: Deploy FixItNow Application
+  hosts: all
+  become: yes
+  vars:
+    mysql_root_password: "Ahnaf111#"
+    mysql_database: "fixitnowdb"
+    docker_network: "fixitnow-network"
+
+  tasks:
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: yes
+
+    - name: Create Docker network
+      docker_network:
+        name: "{{ docker_network }}"
+        state: present
+
+    - name: Deploy MySQL container
+      docker_container:
+        name: fixitnow-db
+        image: mysql:8.0
+        state: started
+        restart_policy: unless-stopped
+        env:
+          MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+          MYSQL_DATABASE: "{{ mysql_database }}"
+        ports:
+          - "3307:3306"
+        networks:
+          - name: "{{ docker_network }}"
+
+    - name: Deploy Backend container
+      docker_container:
+        name: fixitnow_backend_1
+        image: ahnaf4920/backend-v1.0:latest
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "8090:8091"
+        networks:
+          - name: "{{ docker_network }}"
+
+    - name: Deploy Frontend container
+      docker_container:
+        name: fixitnow_frontend_1
+        image: ahnaf4920/frontend-v1.0:latest
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "3000:80"
+        networks:
+          - name: "{{ docker_network }}"
