@@ -1,0 +1,57 @@
+# Backend
+backend/target/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+backend/package-lock.json
+*.class
+*.war
+*.log
+
+# Frontend  
+fixitnow/node_modules/
+fixitnow/dist/
+fixitnow/build/
+fixitnow/.vite/
+fixitnow/.env.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+
+# Scripts and utilities
+*.ps1
+docker-wsl-bridge.ps1
+verify-system.ps1
+
+# Guide files (keep only README)
+ANSIBLE_GUIDE.md
+AWS_CLI_GUIDE.md
+AWS_DEPLOYMENT_GUIDE.md
+AWS_ACTIVATION_CHECKLIST.md
+DOCKER_FIX_GUIDE.md
+JENKINS_SETUP.md
+VERIFICATION_REPORT.md
+INTEGRATION_TEST_REPORT.md
+DOCKER_QUICK_REF.md
+DOCKER_SETUP.md
+PROJECT_STATUS.md
+
+# Jenkins
+jenkins_home/
+jenkins_data/
+jenkins.war
+
+# System
+.env
+*.swp
+*~
